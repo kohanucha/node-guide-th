@@ -299,7 +299,7 @@ sudo chmod 700 /var/lib/tor/electrs
 restart tor
 
 ```bash
-restart Tor
+sudo systemctl restart tor
 ```
 
 วิธีตรวจสอบ Tor address

@@ -247,7 +247,7 @@ sudo chmod 700 /var/lib/tor/bitcoinexplorer
 restart tor
 
 ```bash
-restart Tor
+sudo systemctl restart tor
 ```
 
 วิธีตรวจสอบ Tor address

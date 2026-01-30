@@ -390,7 +390,7 @@ sudo chmod 700 /var/lib/tor/mempool
 restart tor
 
 ```bash
-restart Tor
+sudo systemctl restart tor
 ```
 
 วิธีตรวจสอบ Tor address
