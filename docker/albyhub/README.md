@@ -1,91 +1,84 @@
-# Albyhub Docker
+# Alby Hub Docker (สำหรับมือใหม่)
 
-คู่มือนี้จะแนะนำการ run albyhub docker container จาก docker image ของ [albyhub](https://github.com/getAlby/hub)
+Alby Hub เป็นกระเป๋าเงิน (Wallet) และ Lightning Node ที่ใช้งานง่ายบนเบราว์เซอร์ คู่มือนี้จะช่วยให้คุณติดตั้ง Alby Hub ด้วย Docker ได้อย่างรวดเร็ว
 
-## วิธี Run Docker Container
-### กำหนดค่า Environment variables
+## สิ่งที่ต้องเตรียม
+1. **Docker**: หากยังไม่ได้ติดตั้ง ดูวิธีได้ที่ [การติดตั้ง Docker](../install.md)
+2. **Bitcoin Node**: Alby Hub จำเป็นต้องเชื่อมต่อกับ Bitcoin Node (สามารถใช้โหนดของตัวเองหรือบริการภายนอกก็ได้)
 
-กำหนดค่าสำหรับ Albyhub ในไฟล์ [.env](.env)
+---
 
-* `UID` คือ ค่า user id ที่ใช้ run container
-* `GID` คือ ค่า group id ที่ใช้ run container
-* `VERSION` คือ version ที่ต้องการ run
-* `HOST_ALBY_HUB_DATA_DIR` คือ ค่า directory ที่ใช้เก็บ data ของ albyhub ที่อยู่ใน host machine
+## ขั้นตอนการติดตั้ง
 
-### กำหนดค่าการเชื่อมต่อ Bitcoin Node
-กำหนดค่า `environment` สำหรับเชื่อมต่อ Bitcoin Node ในไฟล์ [docker-compose.yml](docker-compose.yml)
-
-#### ตัวเลือกที่ 1 - ใช้ค่า Default ของ Albyhub
-ไม่ต้องกำหนดค่าอะไรเพิ่มเติม ซึ่งค่า default ของ albyhub จะเชื่อมต่อไปยัง https://electrs.getalbypro.com
-
-#### ตัวเลือกที่ 2 - ใช้ค่า Esplora Server อื่น ๆ เช่น block stream หรือของตัวเอง
-ให้กำหนดค่าดังนี้
-
-```
-LDK_ESPLORA_SERVER: https://blockstream.info/api
+### 1. เตรียม Folder สำหรับเก็บข้อมูล
+สร้างโฟลเดอร์สำหรับเก็บข้อมูลของ Alby Hub:
+```bash
+mkdir -p /mnt/alby-hub-data
 ```
 
-#### ตัวเลือกที่ 3 - ใช้ Electrum Server ของตัวเอง
-ให้กำหนดค่าดังนี้
+### 2. ตั้งค่าไฟล์ .env
+แก้ไขไฟล์ [.env](.env) เพื่อกำหนดค่าพื้นฐาน:
+* **UID** และ **GID**: ID ของผู้ใช้ในเครื่อง (ปกติคือ `1000`)
+* **HOST_ALBY_HUB_DATA_DIR**: ระบุ Path ของโฟลเดอร์ที่สร้างในขั้นตอนที่ 1
+* **VERSION**: เวอร์ชันของ Alby Hub ที่ต้องการรัน
 
-```
-LDK_ELECTRUM_SERVER: electrum.example.com:50001
-```
+### 3. เลือกวิธีการเชื่อมต่อ Bitcoin Node
+เปิดไฟล์ [docker-compose.yml](docker-compose.yml) และดูในส่วน `environment:` คุณสามารถเลือกเชื่อมต่อได้หลายวิธี:
 
-#### ตัวเลือกที่ 4 - ใช้ Bitcoin Node ของตัวเอง
-ให้กำหนดค่าดังนี้
+* **วิธีที่ 1: ใช้ค่าเริ่มต้นของ Alby (ง่ายที่สุด)**
+  ไม่ต้องแก้อะไร Alby Hub จะเชื่อมต่อไปยังบริการของ Alby โดยอัตโนมัติ
 
-```
-LDK_BITCOIND_RPC_HOST: 127.0.0.1
-LDK_BITCOIND_RPC_PORT: 8332
-LDK_BITCOIND_RPC_USER: ""
-LDK_BITCOIND_RPC_PASSWORD: ""
-```
+* **วิธีที่ 2: ใช้ Electrum Server ของตัวเอง**
+  ระบุที่อยู่ของ Electrum Server:
+  ```yaml
+  LDK_ELECTRUM_SERVER: "electrum.example.com:50001"
+  ```
 
-**หมายเหตุ**
-- ในกรณีที่ใช้ Bitcoin Node ของตัวเองและต้องการใช้ cookie file ในการ authentication ให้กำหนดค่าดังนี้
+* **วิธีที่ 3: ใช้ Bitcoin Node ของตัวเอง (RPC User/Pass)**
+  แก้ไขค่าเหล่านี้ให้ตรงกับ Node ของคุณ:
+  ```yaml
+  LDK_BITCOIND_RPC_HOST: "127.0.0.1"
+  LDK_BITCOIND_RPC_PORT: 8332
+  LDK_BITCOIND_RPC_USER: "your_user"
+  LDK_BITCOIND_RPC_PASSWORD: "your_password"
+  ```
 
-```
-LDK_BITCOIND_RPC_USER="__cookie__"
-LDK_BITCOIND_RPC_PASSWORD="{ค่า cookie auth ของ bitcoind ซึ่งดูได้จาก bitcoin data directory}"
-```
+* **วิธีที่ 4: ใช้ Bitcoin Node ของตัวเอง (Cookie Auth)**
+  หากต้องการใช้ cookie file ในการยืนยันตัวตน:
+  ```yaml
+  LDK_BITCOIND_RPC_HOST: "127.0.0.1"
+  LDK_BITCOIND_RPC_PORT: 8332
+  LDK_BITCOIND_RPC_USER: "__cookie__"
+  LDK_BITCOIND_RPC_PASSWORD: "{ค่าจากไฟล์ .cookie ใน bitcoin data directory}"
+  ```
 
-- Default port ของ albyhub คือ 8080 ถ้าต้องการเข้า หน้าจอ albyhub ด้่วย http (port 80) หรือ https (port 443) ต้อง map port ของ albyhub ไปยัง port ของ host machine ใน [docker-compose.yml](docker-compose.yml)
-
-```yaml
-ports:
-  - 80:8080
-```
-
-### Start docker container
-ใช้คำสั่ง `docker compose up -d` เพื่อเริ่ม container
-
-```sh
+### 4. เริ่มรัน Alby Hub
+ใช้คำสั่ง:
+```bash
 docker compose up -d
 ```
+เมื่อรันเสร็จแล้ว คุณสามารถเข้าใช้งาน Alby Hub ผ่านเบราว์เซอร์ที่ `http://localhost:8080` (หรือไอพีของเครื่องคุณ)
 
-### Check docker container status
+---
 
-ใช้คำสั่ง `docker ps` เพื่อเช็ค status ของ container
+## การตรวจสอบสถานะ
 
-```sh
+### เช็คว่าทำงานอยู่หรือไม่
+```bash
 docker ps
 ```
 
-### Stop docker container
-
-ใช้คำสั่ง `docker compose down` เพื่อหยุด container
-
-```sh
-docker compose down
+### ดู Logs การทำงาน
+```bash
+docker logs -f albyhub
 ```
 
-### Restart docker container
+---
 
-ใช้คำสั่ง `docker compose restart` เพื่อ restart container
+## คำสั่งที่ใช้บ่อย
+* **หยุดการทำงาน**: `docker compose down`
+* **เริ่มการทำงานใหม่**: `docker compose restart`
+* **อัปเดตเวอร์ชัน**: แก้ไข `VERSION` ใน `.env` แล้วรัน `docker compose up -d` อีกครั้ง
 
-```sh
-docker compose restart
-```
-
-[Back to main README](../README.md)
+---
+[กลับไปหน้าหลัก](../../README.md)

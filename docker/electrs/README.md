@@ -1,100 +1,81 @@
-# Electrs Docker
+# Electrs Docker (สำหรับมือใหม่)
 
-คู่มือนี้จะแนะนำการสร้าง docker image และ docker container จาก repository ของ [Electrs](https://github.com/romanz/electrs)
+Electrs เป็นโปรแกรมที่ช่วยให้ Bitcoin Wallet (เช่น Electrum, BlueWallet, Alby) เชื่อมต่อกับ Bitcoin Node ของคุณได้รวดเร็วขึ้น คู่มือนี้จะช่วยคุณติดตั้ง Electrs ผ่าน Docker
 
-## วิธี Build Docker Image
-### Build Docker Image
-เพื่อสร้าง docker image ของ Electrs ให้เรียกใช้คำสั่ง `./build/build.sh` ในโฟลเดอร์ [build](build) ของโปรเจค
+## สิ่งที่ต้องเตรียม
+1. **Docker**: ดูวิธีได้ที่ [การติดตั้ง Docker](../install.md)
+2. **Bitcoin Node**: ต้อง Sync เสร็จสมบูรณ์แล้ว (ควรใช้พื้นที่เก็บข้อมูลเดียวกันหรือเชื่อมต่อถึงกันได้)
 
+---
+
+## ขั้นตอนที่ 1: การ Build Docker Image (สร้างโปรแกรม)
+
+เนื่องจาก Electrs ควรถูกสร้าง (Compile) ให้เหมาะกับสถาปัตยกรรมของเครื่องคุณ เราจะเริ่มด้วยการสร้าง Docker Image เองก่อน:
+
+1. เข้าไปที่โฟลเดอร์ `build`:
+   ```bash
+   cd build
+   ```
+2. รันสคริปต์สำหรับสร้าง Image:
+   ```bash
+   chmod +x build.sh
+   ./build.sh
+   ```
+   *(ขั้นตอนนี้อาจใช้เวลาสักพัก ขึ้นอยู่กับความเร็วเครื่องของคุณ)*
+3. ตรวจสอบว่า Image ถูกสร้างสำเร็จ:
+   ```bash
+   docker images
+   ```
+   ควรเห็นรายการชื่อ `local/electrs` ปรากฏขึ้น
+
+### การทำงานของ Dockerfile (ข้อมูลเพิ่มเติม)
+หากคุณสงสัยว่าในขั้นตอนการ Build เกิดอะไรขึ้นบ้าง สามารถดูได้ที่ไฟล์ [Dockerfile](build/Dockerfile):
+1. **ดาวน์โหลด Source Code**: ดึงโค้ดล่าสุดจาก [GitHub ของ romanz/electrs](https://github.com/romanz/electrs)
+2. **Compile โปรแกรม**: ใช้ภาษา Rust ในการสร้างไฟล์โปรแกรม (Binary) ที่เหมาะสมกับเครื่องของคุณที่สุด
+3. **สร้าง Image ที่ปลอดภัย**: นำไฟล์โปรแกรมที่สร้างเสร็จแล้ว ไปใส่ไว้ในสภาพแวดล้อมที่สะอาดและปลอดภัย (Debian Slim) โดยแยกส่วนที่ใช้ Build ออกไปเพื่อให้ Image มีขนาดเล็กที่สุด
+
+---
+
+## ขั้นตอนที่ 2: การรัน Electrs Container
+
+หลังจากสร้าง Image สำเร็จแล้ว เราจะมาตั้งค่าการทำงาน:
+
+1. เข้าไปที่โฟลเดอร์ `run`:
+   ```bash
+   cd ../run
+   ```
+2. ตั้งค่าไฟล์ [.env](run/.env) เพื่อเชื่อมต่อกับ Bitcoin Node:
+   * **ELECTRS_HOST_DB_DIR**: โฟลเดอร์ที่จะเก็บ Database ของ Electrs (แนะนำเป็น SSD)
+   * **ELECTRS_HOST_DAEMON_DIR**: Path ของโฟลเดอร์ข้อมูลของ Bitcoin Node ที่ Sync ไว้
+   * **ELECTRS_DAEMON_RPC_ADDR**: ไอพีของ Bitcoin RPC (ปกติคือ `127.0.0.1:8332`)
+
+3. เริ่มรัน Electrs:
+   ```bash
+   docker compose up -d
+   ```
+
+---
+
+## การตรวจสอบสถานะ
+
+### ดูการทำงานของ Electrs
+```bash
+docker logs -f electrs
 ```
-./build/build.sh
-```
+*ช่วงแรก Electrs จะต้องทำการ "Indexing" ข้อมูลจาก Bitcoin Node ซึ่งอาจใช้เวลาหลายชั่วโมงถึงหลายวัน ขึ้นอยู่กับความเร็วของ Disk*
 
-ใน script นี้จะกำหนดค่าเริ่มต้นของ IMAGE_NAME และ VERSION ให้คุณ ซึ่งคุณสามารถแก้ไขค่าเหล่านี้ได้ตามความต้องการ
- หลังจาก run script แล้ว อาจจะใช้เวลาในการ compile rust project และ build docker image สักระยะนึง
-
-### Dockerfile
-[build/build.sh](build/build.sh) ทำหน้าที่สร้าง docker image จาก Dockerfile
-
-ซึ่งคุณสามารถตรวจสอบการทำงานและทำความเข้าใจ [Dockerfile](build/Dockerfile) ได้ในโฟลเดอร์ [build](build)
-
-### ตรวจสอบ Docker Image
-หลังจากสร้าง docker image แล้ว คุณสามารถตรวจสอบ docker image ที่สร้างได้โดยเรียกใช้คำสั่ง `docker images`
-
-```
-docker images
-```
-
-คำสั่ง `docker images` จะแสดงรายการของ docker image ที่มีอยู่ในเครื่องของคุณ
-
-```
-$ docker images
-REPOSITORY            TAG       IMAGE ID       CREATED        SIZE
-local/electrs         v0.10.9   1b22aef2becb   3 months ago   111MB
-```
-
-## วิธี Run Docker Container
-### Environment Variables
-
-กำหนดค่า Environment Variables ในไฟล์ [.env](run/.env)
-
-* `UID` คือ ค่า user id ที่ใช้ run container
-
-* `GID` คือ ค่า group id ที่ใช้ run container
-
-* `ELECTRS_IMAGE_NAME` ชื่อ image ที่ build จาก step ก่อนหน้า
-
-* `ELECTRS_VERSION` คือ version ของ image ที่ build จาก step ก่อนหน้า
-
-* `ELECTRS_LOG_FILTERS` คือ Log level ของ electrs ปกติจะกำหนดเป็น INFO
-
-* `ELECTRS_NETWORK` คือ Network ที่ต้องการรัน ปกติจะกำหนดเป็น bitcoin
-
-* `ELECTRS_HOST_DB_DIR` คือ Directory ที่ใช้เก็บ database ของ electrs บน host machine
-
-* `ELECTRS_DB_DIR` คือ Directory ที่ใช้เก็บ database ของ electrs ภายใน container ซึ่งจะเป็น `/home/${USER}/electrs/db`
-
-* `ELECTRS_HOST_DAEMON_DIR` คือ Directory ที่ใช้เก็บข้อมูล bitcoin daemon บน host machine
-
-* `ELECTRS_DAEMON_DIR` คือ Directory ที่ใช้เก็บข้อมูล bitcoin daemon ภายใน container ซึ่งจะเป็น `/home/${USER}/electrs/bitcoin`
-
-* `ELECTRS_DAEMON_RPC_ADDR` คือ bitcoin daemon rpc address
-
-* `ELECTRS_DAEMON_P2P_ADDR` คือ bitcoin daemon p2p address
-
-* `ELECTRS_ELECTRUM_RPC_ADDR` คือ electrum rpc address ที่เราจะ expose ให้สามารถเชื่อมต่อได้
-
-`${USER}` ในที่นี้จะหมายถึง user ของ host machine ที่ใช้ build docker image
-
-### Start docker container
-เข้าไปที่ [run](run) แล้วใช้คำสั่ง `docker compose up -d` เพื่อเริ่ม container
-
-```
-docker compose up -d
-```
-
-### Check docker container status
-
-ใช้คำสั่ง `docker ps` เพื่อเช็ค status ของ container
-
-```
+### เช็คพอร์ตการเชื่อมต่อ
+ตรวจสอบว่า Electrum Server เปิดรอรับการเชื่อมต่อ (Port 50001) หรือยัง:
+```bash
 docker ps
 ```
 
-### Stop docker container
+---
 
-ใช้คำสั่ง `docker compose down` เพื่อหยุด container
+## คำสั่งที่ใช้บ่อย
+* **หยุดการทำงาน**: `docker compose down` (รันในโฟลเดอร์ `run`)
+* **เริ่มการทำงานใหม่**: `docker compose restart`
+* **อัปเดตเวอร์ชัน**: แก้ไขค่า `VERSION` ใน `build/build.sh` แล้วกลับไปทำขั้นตอนที่ 1 และ 2 ใหม่
 
-```
-docker compose down
-```
-
-### Restart docker container
-
-ใช้คำสั่ง `docker compose restart` เพื่อ restart container
-
-```
-docker compose restart
-```
-
-[Back to main README](../README.md)
+---
+[กลับไปหน้าหลัก](../../README.md)

@@ -1,63 +1,73 @@
-# Bitcoin Core Docker
+# Bitcoin Core Docker (สำหรับมือใหม่)
 
-คู่มือนี้จะแนะนำการ run docker container จาก docker image ของ [lnliz/docker-bitcoind](https://github.com/lnliz/docker-bitcoind) ซึ่ง fork มาจาก [lncm/docker-bitcoind](https://github.com/lncm/docker-bitcoind) ที่ fork มาจาก [ruimarinho/docker-bitcoin-core](https://github.com/ruimarinho/docker-bitcoin-core) อีกที ใน repository นี้ จะมี Dockerfile ที่ใช้ในการสร้าง image bitcoin สามารถเข้าไปตรวจสอบกันได้เลยครับ
+หน้านี้จะแนะนำการติดตั้ง Bitcoin Core Node โดยใช้ Docker ซึ่งเป็นวิธีที่ง่ายและสะดวกที่สุดสำหรับผู้เริ่มต้นในการรันโหนดของตัวเอง
 
-## วิธี Run Docker Container
-### Environment Variables
+## สิ่งที่ต้องเตรียม
+1. **Docker**: หากยังไม่ได้ติดตั้ง สามารถดูวิธีได้ที่ [การติดตั้ง Docker](../install.md)
+2. **พื้นที่จัดเก็บข้อมูล**: สำหรับ Full Node (Mainnet) ควรมีพื้นที่ว่างอย่างน้อย 600GB - 1TB (แนะนำเป็น SSD เพื่อความเร็วในการ Sync)
 
-กำหนดค่า Environment Variables ในไฟล์ [.env](.env)
+---
 
-#### Bitcoin
-* `UID` คือ ค่า user id ที่ใช้ run container ควรตั้งเป็น user id ของ user bitcoind ใน container ซึ่งเท่ากับ 1000
-* `GID` คือ ค่า group id ที่ใช้ run container ควรตั้งเป็น group id ของ user bitcoind ใน container ซึ่งเท่ากับ 1000
-* `IMAGE_NAME` ชื่อ image ที่ต้องการ run
-* `VERSION` คือ version ที่ต้องการ run
-* `HOST_DATA_DIR` คือ ค่า directory ที่ใช้เก็บ data ของ bitcoin ที่อยู่ใน host machine
+## ขั้นตอนการติดตั้ง
 
-#### Tor
-* `TOR_GID` คือ ค่า group id ที่ใช้ run tor ใน host machine เพื่อให้ docker add user ที่เราใช้ในการ run เข้าไปใน tor group เพื่ออ่านไฟล์ auth cookie ของ tor
-* `TOR_AUTH_COOKIE_FILE` คือค่า file path ที่ใช้เก็บ auth cookie ของ tor ที่อยู่ใน host machine ใช้สำหรับเชื่อมต่อ tor control เพื่อ hidden service
-
-**หมายเหตุ:**
-- ถ้าต้องการใช้ tor จำเป็นต้องมีค่า `TOR_GID` และ `TOR_AUTH_COOKIE_FILE` ในการ run bitcoin daemon
-- ถ้าไม่ต้องการใช้ tor ในการ run bitcoin daemon ให้ลบ 2 ส่วนนี้ใน [docker-compose.yml](docker-compose.yml) ได้เลย
-```yml
-group_add:
-      - ${TOR_GID}
-```
-```yml
-- ${TOR_AUTH_COOKIE_FILE}:/run/tor/control.authcookie:ro
+### 1. เตรียม Folder สำหรับเก็บข้อมูล
+สร้างโฟลเดอร์ในเครื่องของคุณเพื่อเก็บข้อมูลบล็อกเชน (เช่น `/mnt/bitcoin-data`)
+```bash
+mkdir -p /mnt/bitcoin-data
 ```
 
-### Start docker container
-ใช้คำสั่ง `docker compose up -d` เพื่อเริ่ม container
+### 2. ตั้งค่าไฟล์ .env
+แก้ไขไฟล์ [.env](.env) ในโฟลเดอร์นี้ เพื่อกำหนดค่าที่จำเป็น:
 
-```sh
+* **UID** และ **GID**: คือ User ID และ Group ID ของคุณ (สามารถตรวจสอบได้ด้วยคำสั่ง `id`) ปกติค่าเริ่มต้นคือ `1000`
+* **HOST_DATA_DIR**: **(สำคัญมาก)** ระบุ Path ของโฟลเดอร์ที่คุณสร้างในขั้นตอนที่ 1
+* **IMAGE_NAME** และ **VERSION**: ชื่อ Image และเวอร์ชันที่ต้องการรัน (ปกติค่าเริ่มต้นจะตั้งมาให้แล้ว)
+* **TOR_GID** และ **TOR_AUTH_COOKIE_FILE**: สำหรับผู้ที่ต้องการใช้ Tor เพื่อความเป็นส่วนตัว (หากไม่ใช้ ให้เว้นว่างไว้และดูหมายเหตุด้านล่าง)
+
+### 3. เริ่มรัน Node
+ใช้คำสั่งด้านล่างเพื่อเริ่มการทำงานในโหมด Background (เบื้องหลัง):
+
+```bash
 docker compose up -d
 ```
 
-### Check docker container status
+---
 
-ใช้คำสั่ง `docker ps` เพื่อเช็ค status ของ container
+## การตรวจสอบสถานะ
 
-```sh
+### ดูว่า Node ทำงานอยู่หรือไม่
+ใช้คำสั่งเพื่อเช็คว่า Container ชื่อ `bitcoind` กำลังทำงาน (Up) หรือไม่:
+```bash
 docker ps
 ```
 
-### Stop docker container
-
-ใช้คำสั่ง `docker compose down` เพื่อหยุด container
-
-```sh
-docker compose down
+### ดู Logs การทำงาน (เพื่อเช็คว่ากำลัง Sync หรือไม่)
+คำสั่งนี้จะช่วยให้คุณเห็นสิ่งที่โปรแกรมกำลังทำอยู่แบบ Real-time:
+```bash
+docker logs -f bitcoind
 ```
 
-### Restart docker container
-
-ใช้คำสั่ง `docker compose restart` เพื่อ restart container
-
-```sh
-docker compose restart
+### เช็คสถานะการ Sync ผ่าน bitcoin-cli
+คุณสามารถส่งคำสั่งเข้าไปใน Container เพื่อเช็คข้อมูลของ Blockchain ได้โดยตรง:
+```bash
+docker exec -it bitcoind bitcoin-cli -datadir=/data/.bitcoin/ getblockchaininfo
 ```
+*มองหาค่า `blocks` (จำนวนบล็อกปัจจุบัน) และ `verificationprogress` (ถ้าเป็น `0.99...` แสดงว่าใกล้ Sync เสร็จแล้ว)*
 
-[Back to main README](../README.md)
+---
+
+## คำสั่งที่ใช้บ่อย
+
+* **หยุดการทำงาน**: `docker compose down`
+* **เริ่มการทำงานใหม่**: `docker compose restart`
+* **อัปเดตเวอร์ชัน**: แก้ไขค่า `VERSION` ในไฟล์ `.env` จากนั้นรัน `docker compose up -d` อีกครั้ง Docker จะทำการดาวน์โหลดเวอร์ชันใหม่และรันให้โดยอัตโนมัติ
+
+---
+
+## หมายเหตุสำหรับการใช้ Tor
+หากคุณ**ไม่ต้องการ**ใช้ Tor ให้แก้ไขไฟล์ [docker-compose.yml](docker-compose.yml) โดยลบหรือ Comment ส่วนเหล่านี้ออก:
+1. ในส่วน `group_add:` ให้ลบบรรทัด `- ${TOR_GID}`
+2. ในส่วน `volumes:` ให้ลบบรรทัด `- ${TOR_AUTH_COOKIE_FILE}:/run/tor/control.authcookie:ro`
+
+---
+[กลับไปหน้าหลัก](../../README.md)
